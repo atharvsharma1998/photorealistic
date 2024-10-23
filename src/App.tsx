@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Viewer, Entity, Cesium3DTileset } from 'resium';
-import { Cartesian3, HeadingPitchRange, ImageryLayer, UrlTemplateImageryProvider, defined, ScreenSpaceEventHandler,ScreenSpaceEventType, Math as CesiumMath, NearFarScalar, DistanceDisplayCondition, LabelStyle, VerticalOrigin, Cartesian2, Cartesian3 as CesiumCartesian3, Transforms, CameraEventType, Color } from 'cesium';
+import { useState, useEffect } from 'react';
+import { Viewer, Cesium3DTileset } from 'resium';
+import { Cartesian3, HeadingPitchRange, ImageryLayer, UrlTemplateImageryProvider, Math as CesiumMath,  Cartesian3 as CesiumCartesian3, Transforms} from 'cesium';
 import './output.css';
 
 // Predefined locations with coordinates typed as [number, number]
@@ -104,7 +104,7 @@ export default function App() {
       if (viewer) {
         // Set the initial view slightly above the Hawaii region
        // -156.888275, 20.094098
-       const canvas = viewer.scene.canvas;
+      //  const canvas = viewer.scene.canvas;
 
         
         viewer.camera.setView({
@@ -184,7 +184,6 @@ export default function App() {
           <p className="text-2xl">Witness the impact and support the recovery</p>
         </div>
       </section>
-
 
       {/* Information Section */}
       <section className="py-16 bg-gray-100">
