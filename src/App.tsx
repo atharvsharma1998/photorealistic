@@ -1,20 +1,67 @@
 import { useState, useEffect } from 'react';
 import { Viewer, Cesium3DTileset } from 'resium';
-import { Cartesian3, HeadingPitchRange, ImageryLayer, UrlTemplateImageryProvider, Math as CesiumMath,  Cartesian3 as CesiumCartesian3, Transforms} from 'cesium';
+import { Cartesian3, HeadingPitchRange, Math as CesiumMath,  Cartesian3 as CesiumCartesian3, Transforms} from 'cesium';
 import './output.css';
 
-// Predefined locations with coordinates typed as [number, number]
-const locations: { name: string, coordinates: [number, number] }[] = [
-  { name: "Lahaina Banyan Court Park", coordinates: [-156.6779217812668, 20.871660992482585] },
-  { name: "Lahaina Historic District", coordinates: [-156.67665500607714, 20.875698021019634] },
-  { name: "Lahaina Jodo Mission", coordinates: [-156.68738910041318, 20.882715610556918] },
-  { name: "Kamehameha III School", coordinates: [-156.67687099268292, 20.87048936379182] },
-  { name: "Lahaina's Front Street", coordinates: [-156.67749607658604, 20.872279930692464] },
-  { name: "Ulalena at Maui Theatre", coordinates: [-156.6799569299401, 20.876752716785354] },
+
+// Define types for our data structures
+interface Location {
+  name: string;
+  coordinates: [number, number];
+  afterImage: string;
+  description: string;
+}
+
+interface DonationLink {
+  name: string;
+  url: string;
+  image: string;
+  description: string;
+}
+
+// Predefined locations with coordinates and after images
+const locations: Location[] = [
+  { 
+    name: "Lahaina Banyan Court Park", 
+    coordinates: [-156.6779217812668, 20.871660992482585], 
+    afterImage: "images/satelliteImages/banyan-tree-Mario-Tama.webp",
+    description: "Historic banyan tree and surrounding park area severely impacted by the fires."
+  },
+  { 
+    name: "Lahaina Historic District", 
+    coordinates: [-156.67665500607714, 20.875698021019634], 
+    afterImage: "images/donateImages/maui-food-bank-wide.jpg",
+    description: "Cultural heart of Lahaina, containing numerous historic buildings and landmarks."
+  },
+  { 
+    name: "Lahaina Jodo Mission", 
+    coordinates: [-156.68738910041318, 20.882715610556918], 
+    afterImage: "images/backgroundImages/one.jpg",
+    description: "Buddhist temple complex that has been a spiritual center since 1912."
+  },
+  { 
+    name: "Kamehameha III School", 
+    coordinates: [-156.67687099268292, 20.87048936379182], 
+    afterImage: "images/backgroundImages/two.jpg",
+    description: "Historic school named after Hawaii's longest-reigning monarch." 
+  },
+  { 
+    name: "Lahaina's Front Street", 
+    coordinates: [-156.67749607658604, 20.872279930692464], 
+    afterImage: "images/backgroundImages/three.jpg",
+    description: "Iconic waterfront street lined with shops, restaurants, and galleries."
+  },
+  { 
+    name: "Ulalena at Maui Theatre", 
+    coordinates: [-156.6799569299401, 20.876752716785354], 
+    afterImage: "images/backgroundImages/one.jpg",
+    description: "Cultural theater showcasing Hawaiian history and traditions."
+  },
 ];
 
+
 // Donation links with images and descriptions
-const donationLinks = [
+const donationLinks: DonationLink[] = [
   { 
     name: "Hawaii Community Foundation", 
     url: "https://www.hawaiicommunityfoundation.org/maui-strong", 
@@ -22,22 +69,22 @@ const donationLinks = [
     description: "Supporting long-term recovery efforts for Maui communities"
   },
   { 
-    name: "American Red Cross", 
-    url: "https://www.redcross.org/donate/donation.html/", 
-    image: "images/donateImages/maui-food-bank-wide.jpg",
-    description: "Providing emergency shelter, supplies, and support for affected families"
+    name: "All Hands and Hearts", 
+    url: "https://www.allhandsandhearts.org/programs/hawaii-wildfire-relief/", 
+    image: "images/donateImages/All-Hands-Hearts.png",
+    description: "Providing ineligible debris removal, multi-purpose units and support for affected families"
   },
   { 
     name: "Maui Food Bank", 
     url: "https://mauifoodbank.org/donate/", 
-    image: "/placeholder.svg?height=200&width=300",
+    image: "images/donateImages/maui-food-bank.jpg",
     description: "Distributing food to those impacted by the wildfires"
   },
   { 
     name: "Maui Humane Society", 
     url: "https://www.mauihumanesociety.org/donate/", 
-    image: "/placeholder.svg?height=200&width=300",
-    description: "Caring for and reuniting pets displaced by the disaster"
+    image: "images/donateImages/MHS-Logo.png",
+    description: "Maui Humane Society has taken in 800 animals since the Lahaina fire. Support them from being overwehlemed"
   },
 ];
 
@@ -53,7 +100,11 @@ export default function App() {
   const [currentBackgroundIndex, setCurrentBackgroundIndex] = useState(0);
   const [viewer, setViewer] = useState<any>(null);
   const [unsubscribe, setUnsubscribe] = useState<any>(null);
-  const [imageryLayer, setImageryLayer] = useState<ImageryLayer | null>(null);
+  const [showAfterImage, setShowAfterImage] = useState(false);
+  // const [selectedLocation, setSelectedLocation] = useState(null);
+  const [selectedLocationData, setSelectedLocationData] = useState<Location | null>(null);
+
+
 
   const pointCameraAt = (location: [number, number], elevation: number = 10) => {
     const center = Cartesian3.fromDegrees(location[0], location[1], elevation);
@@ -86,11 +137,11 @@ export default function App() {
     if (viewer && selectedLocation) {
       const [lng, lat] = selectedLocation;
 
-      // viewer.scene.screenSpaceCameraController.enableRotate = false;
+      viewer.scene.screenSpaceCameraController.enableRotate = false;
       // viewer.scene.screenSpaceCameraController.enableZoom = false;
-      // viewer.scene.screenSpaceCameraController.enableTranslate = false;
-      // viewer.scene.screenSpaceCameraController.enableTilt = false;
-      // viewer.scene.screenSpaceCameraController.enableLook = false;
+      viewer.scene.screenSpaceCameraController.enableTranslate = false;
+      viewer.scene.screenSpaceCameraController.enableTilt = false;
+      viewer.scene.screenSpaceCameraController.enableLook = false;
 
       // flyAndRotateCamera([lng, lat], 100);
       rotateCameraAround([lng, lat], 30);
@@ -117,37 +168,16 @@ export default function App() {
         });
 
       // Disable all user interactions initially
-      // viewer.scene.screenSpaceCameraController.enableRotate = false;
+      viewer.scene.screenSpaceCameraController.enableRotate = false;
       // viewer.scene.screenSpaceCameraController.enableZoom = false;
-      // viewer.scene.screenSpaceCameraController.enableTranslate = false;
-      // viewer.scene.screenSpaceCameraController.enableTilt = false;
-      // viewer.scene.screenSpaceCameraController.enableLook = false;
+      viewer.scene.screenSpaceCameraController.enableTranslate = false;
+      viewer.scene.screenSpaceCameraController.enableTilt = false;
+      viewer.scene.screenSpaceCameraController.enableLook = false;
 
 
       }
     }, [viewer]);
 
-      // Show 2D tiles when holding the button down
-  const show2DTiles = () => {
-    console.log('pressed');
-    if (viewer) {
-      // Add the imagery layer
-      const provider = new UrlTemplateImageryProvider({
-        url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${process.env.REACT_APP_GMAP_API_KEY}`,
-      });
-
-      const layer = viewer.scene.imageryLayers.addImageryProvider(provider);
-      setImageryLayer(layer);
-    }
-  };
-
-    // Hide 2D tiles and revert to 3D when the button is released
-    const hide2DTiles = () => {
-      if (viewer && imageryLayer) {
-        viewer.scene.imageryLayers.remove(imageryLayer);
-        setImageryLayer(null);
-      }
-    };
 
     useEffect(() => {
       const intervalId = setInterval(() => {
@@ -156,34 +186,35 @@ export default function App() {
   
       return () => clearInterval(intervalId);
     }, []);
-
-
-//     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
-// handler.setInputAction(function (click: ScreenSpaceEventHandler.PositionedEvent) {
-//   const pickedObject = viewer.scene.pick(click.position);
   
-//   // Check if the picked object is defined and if you want to ignore it
-//   if (defined(pickedObject) && pickedObject.id && pickedObject.id.ignoreClicks) {
-//     return; // Ignore clicks on this entity
-//   }
 
-//   // Handle click for other entities if needed
-// }, ScreenSpaceEventType.LEFT_CLICK);
+    const handleLocationSelect = (location: Location) => {
+      setSelectedLocation(location.coordinates);
+      setSelectedLocationData(location);
+    };
+  
+    const handleSatelliteToggle = (isPressed: boolean) => {
+      setShowAfterImage(isPressed);
+      console.log(isPressed);
+    };
 
+
+  
   return (
     <div className="flex flex-col min-h-screen">
       {/* Cover Page with Cycling Background */}
-      <section 
+       <section 
         className="h-screen bg-cover bg-center flex items-center justify-center relative"
         style={{backgroundImage: `url(${backgroundImages[currentBackgroundIndex]})`}}
       > 
-        {/* Dark Overlay */}
          <div className="absolute inset-0 bg-black opacity-50"></div>
         <div className="text-center text-white relative z-10">
           <h1 className="text-6xl font-bold mb-4">Lahaina Fires: Before and After</h1>
           <p className="text-2xl">Witness the impact and support the recovery</p>
         </div>
-      </section>
+      </section> 
+
+
 
       {/* Information Section */}
       <section className="py-16 bg-gray-100">
@@ -211,61 +242,86 @@ export default function App() {
       </section>
 
       {/* Cesium Map Section */}
-      <section className="py-16 bg-gray-200">
+
+<section className="py-16 bg-gray-200">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold mb-8 text-center">Affected Areas</h2>
           <div className="relative" style={{ height: "600px" }}>
-                 <Viewer
-                 full
-        baseLayer={false}
-        sceneModePicker={false}
-        navigationHelpButton={false}
-        animation={false}
-        timeline={false}
-        fullscreenButton={false}
-        baseLayerPicker={false}
-        homeButton={false}
-        geocoder={false} // Disable search bar
-        ref={(e) => {
-          if (e && !viewer) {
-            setViewer(e.cesiumElement); // Set the viewer instance
-          }
-        }}
-      >
+            {/* Cesium Map Container */}
+            <div className="absolute inset-0" style={{ opacity: showAfterImage ? 0 : 1, transition: 'opacity 300ms ease-in-out' }}>
+              <Viewer
+                full
+                baseLayer={false}
+                sceneModePicker={false}
+                navigationHelpButton={false}
+                animation={false}
+                timeline={false}
+                fullscreenButton={false}
+                baseLayerPicker={false}
+                homeButton={false}
+                geocoder={false}
+                ref={(e: any) => {
+                  if (e && !viewer) {
+                    setViewer(e.cesiumElement);
+                  }
+                }}
+              >
+                <Cesium3DTileset
+                  url={`https://tile.googleapis.com/v1/3dtiles/root.json?key=${process.env.REACT_APP_GMAP_API_KEY}`}
+                />
+              </Viewer>
+            </div>
 
-        {/* Load a 3D Tileset */}
-        <Cesium3DTileset
-          url={`https://tile.googleapis.com/v1/3dtiles/root.json?key=${process.env.REACT_APP_GMAP_API_KEY}`}
-        />
+            {/* After Image Container */}
+            {selectedLocationData && (
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${selectedLocationData.afterImage})`,
+                  opacity: showAfterImage ? 1 : 0,
+                  transition: 'opacity 300ms ease-in-out',
+                  pointerEvents: 'none'
+                }}
+              />
+            )}
 
-      </Viewer>
-
+            {/* Controls Panel */}
             <div className="absolute top-4 left-4 bg-white bg-opacity-80 p-4 rounded-lg z-10">
               <h3 className="text-xl font-semibold mb-2">Affected Locations</h3>
-              <ul>
+              <ul className="space-y-2">
                 {locations.map((location, index) => (
                   <li 
                     key={index} 
-                    className="cursor-pointer text-blue-600 hover:text-blue-800"
-                    onClick={() => setSelectedLocation(location.coordinates)}
+                    className={`cursor-pointer transition-colors duration-200 ${
+                      selectedLocationData?.name === location.name 
+                        ? 'text-blue-800 font-bold'
+                        : 'text-blue-600 hover:text-blue-700'
+                    }`}
+                    onClick={() => handleLocationSelect(location)}
                   >
                     {location.name}
                   </li>
                 ))}
               </ul>
-                            {/* Button to toggle the 2D tiles */}
-                <button
-                className="mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition duration-300"
-                onMouseDown={show2DTiles}
-                onMouseUp={hide2DTiles}
-                onMouseLeave={hide2DTiles}
-              >
-                Hold to Show 2D Tiles
-              </button>
+
+              {selectedLocationData && (
+                <div className="mt-4 space-y-4">
+                  <p className="text-sm text-gray-600">{selectedLocationData.description}</p>
+                  <button
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition duration-300"
+                    onMouseDown={() => handleSatelliteToggle(true)}
+                    onMouseUp={() => handleSatelliteToggle(false)}
+                    onMouseLeave={() => handleSatelliteToggle(false)}
+                  >
+                    Hold to Show After Image
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
+
 
       {/* Donation Section with Images and Descriptions */}
       <section className="py-16 bg-gray-100">
