@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Viewer, Cesium3DTileset } from 'resium';
-import { Cartesian3, HeadingPitchRange, Math as CesiumMath,  Cartesian3 as CesiumCartesian3, Transforms} from 'cesium';
+import { Viewer, Cesium3DTileset,Entity, BillboardGraphics, LabelGraphics } from 'resium';
+import { Cartesian3, HeadingPitchRange, Math as CesiumMath,  Cartesian3 as CesiumCartesian3, Transforms, Color} from 'cesium';
 import './output.css';
+// import { ChevronLeft, ChevronRight } from "lucide-react"; // Import icons for the hide/show button
+
 
 
 // Define types for our data structures
@@ -28,38 +30,36 @@ const locations: Location[] = [
     description: "Historic banyan tree and surrounding park area severely impacted by the fires."
   },
   { 
-    name: "Lahaina Historic District", 
-    coordinates: [-156.67665500607714, 20.875698021019634], 
-    afterImage: "images/donateImages/maui-food-bank-wide.jpg",
-    description: "Cultural heart of Lahaina, containing numerous historic buildings and landmarks."
-  },
-  { 
     name: "Lahaina Jodo Mission", 
     coordinates: [-156.68738910041318, 20.882715610556918], 
-    afterImage: "images/backgroundImages/one.jpg",
+    afterImage: "images/satelliteImages/dojo.jpeg",
     description: "Buddhist temple complex that has been a spiritual center since 1912."
   },
   { 
     name: "Kamehameha III School", 
     coordinates: [-156.67687099268292, 20.87048936379182], 
-    afterImage: "images/backgroundImages/two.jpg",
+    afterImage: "images/satelliteImages/Kamehameha.jpg",
     description: "Historic school named after Hawaii's longest-reigning monarch." 
   },
   { 
     name: "Lahaina's Front Street", 
     coordinates: [-156.67749607658604, 20.872279930692464], 
-    afterImage: "images/backgroundImages/three.jpg",
+    afterImage: "images/satelliteImages/front-street.jpg",
     description: "Iconic waterfront street lined with shops, restaurants, and galleries."
   },
   { 
-    name: "Ulalena at Maui Theatre", 
-    coordinates: [-156.6799569299401, 20.876752716785354], 
-    afterImage: "images/backgroundImages/one.jpg",
-    description: "Cultural theater showcasing Hawaiian history and traditions."
+    name: "Waiola Church", 
+    coordinates: [-156.67332846686355, 20.86947191845644], 
+    afterImage: "images/satelliteImages/waiolaChurch.jpg",
+    description: "Site of the first Christian mission on Maui, known for Hawaiian royalty buried in its cemetery."
+  },
+  { 
+    name: "Residential Areas", 
+    coordinates: [-156.67120842576315, 20.864372216502645], 
+    afterImage: "images/satelliteImages/residential.webp",
+    description: "Lots of people lost their homes to fires."
   },
 ];
-
-
 // Donation links with images and descriptions
 const donationLinks: DonationLink[] = [
   { 
@@ -86,6 +86,13 @@ const donationLinks: DonationLink[] = [
     image: "images/donateImages/MHS-Logo.png",
     description: "Maui Humane Society has taken in 800 animals since the Lahaina fire. Support them from being overwehlemed"
   },
+  { 
+    name: " Sensei Lahaina Jodo", 
+    url: "https://www.gofundme.com/f/maui-wildfire-relief-fund-for-sensei-lahaina-jodo", 
+    image: "images/donateImages/jodo.webp",
+    description: "Help to rebuild Buddhist temple complex that has been a spiritual center since 1912."
+  },
+
 ];
 
 // Background images for the cover
@@ -101,9 +108,17 @@ export default function App() {
   const [viewer, setViewer] = useState<any>(null);
   const [unsubscribe, setUnsubscribe] = useState<any>(null);
   const [showAfterImage, setShowAfterImage] = useState(false);
-  // const [selectedLocation, setSelectedLocation] = useState(null);
   const [selectedLocationData, setSelectedLocationData] = useState<Location | null>(null);
+  const [isControlPanelVisible, setIsControlPanelVisible] = useState(true);
 
+
+  const getLocationPinPosition = (location: Location) => {
+    return Cartesian3.fromDegrees(
+      location.coordinates[0],
+      location.coordinates[1],
+      10 // Height of the pin above ground
+    );
+  };
 
 
   const pointCameraAt = (location: [number, number], elevation: number = 10) => {
@@ -132,13 +147,12 @@ export default function App() {
     setUnsubscribe(() => () => rotationHandler());
   };
 
-
   useEffect(() => {
     if (viewer && selectedLocation) {
       const [lng, lat] = selectedLocation;
 
       viewer.scene.screenSpaceCameraController.enableRotate = false;
-      // viewer.scene.screenSpaceCameraController.enableZoom = false;
+      viewer.scene.screenSpaceCameraController.enableZoom = false;
       viewer.scene.screenSpaceCameraController.enableTranslate = false;
       viewer.scene.screenSpaceCameraController.enableTilt = false;
       viewer.scene.screenSpaceCameraController.enableLook = false;
@@ -148,7 +162,6 @@ export default function App() {
         
     }
   }, [selectedLocation, viewer]);
-
 
     // Initial camera setup over Hawaii
     useEffect(() => {
@@ -178,7 +191,6 @@ export default function App() {
       }
     }, [viewer]);
 
-
     useEffect(() => {
       const intervalId = setInterval(() => {
         setCurrentBackgroundIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length);
@@ -187,7 +199,6 @@ export default function App() {
       return () => clearInterval(intervalId);
     }, []);
   
-
     const handleLocationSelect = (location: Location) => {
       setSelectedLocation(location.coordinates);
       setSelectedLocationData(location);
@@ -198,8 +209,6 @@ export default function App() {
       console.log(isPressed);
     };
 
-
-  
   return (
     <div className="flex flex-col min-h-screen">
       {/* Cover Page with Cycling Background */}
@@ -248,6 +257,7 @@ export default function App() {
           <h2 className="text-4xl font-bold mb-8 text-center">Affected Areas</h2>
           <div className="relative" style={{ height: "600px" }}>
             {/* Cesium Map Container */}
+            {/*
             <div className="absolute inset-0" style={{ opacity: showAfterImage ? 0 : 1, transition: 'opacity 300ms ease-in-out' }}>
               <Viewer
                 full
@@ -270,7 +280,64 @@ export default function App() {
                   url={`https://tile.googleapis.com/v1/3dtiles/root.json?key=${process.env.REACT_APP_GMAP_API_KEY}`}
                 />
               </Viewer>
+            
             </div>
+            
+            */}
+          <div className="absolute inset-0" style={{ opacity: showAfterImage ? 0 : 1, transition: 'opacity 300ms ease-in-out' }}>
+              <Viewer
+                full
+                baseLayer={false}
+                sceneModePicker={false}
+                navigationHelpButton={false}
+                animation={false}
+                timeline={false}
+                fullscreenButton={false}
+                baseLayerPicker={false}
+                homeButton={false}
+                geocoder={false}
+                ref={(e: any) => {
+                  if (e && !viewer) {
+                    setViewer(e.cesiumElement);
+                  }
+                }}
+              >
+                <Cesium3DTileset
+                  url={`https://tile.googleapis.com/v1/3dtiles/root.json?key=${process.env.REACT_APP_GMAP_API_KEY}`}
+                />
+                
+                {/* Add pins for locations */}
+                {locations.map((location) => (
+        <Entity
+        key={location.name}
+        position={getLocationPinPosition(location)}
+        show={selectedLocationData?.name === location.name}
+      >
+                <LabelGraphics
+          text={location.name}
+          font="14px sans-serif"
+          fillColor={Color.WHITE}
+          outlineColor={Color.BLACK}
+          outlineWidth={2}
+          style={2}
+          verticalOrigin={1}
+          pixelOffset={new Cartesian3(0, -30)}
+          heightReference={1}
+          disableDepthTestDistance={Number.POSITIVE_INFINITY}
+        />
+        <BillboardGraphics
+          image="images/assets/pin.png"
+          verticalOrigin={1}
+          heightReference={1}
+          scale={0.05}
+        />
+
+      </Entity>
+                ))}
+              </Viewer>
+            </div>
+
+
 
             {/* After Image Container */}
             {selectedLocationData && (
@@ -284,6 +351,14 @@ export default function App() {
                 }}
               />
             )}
+
+                      {/* Hide/Show Button */}
+             {/* <button
+              onClick={() => setIsControlPanelVisible(!isControlPanelVisible)}
+              className={`absolute top-4 ${isControlPanelVisible ? 'left-[320px]' : 'left-4'} bg-white bg-opacity-80 p-2 rounded-full shadow-lg z-20 transition-all duration-300 hover:bg-opacity-100`}
+            >
+              {isControlPanelVisible ? <ChevronLeft size={24} /> : <ChevronRight size={24} />}
+            </button> */}
 
             {/* Controls Panel */}
             <div className="absolute top-4 left-4 bg-white bg-opacity-80 p-4 rounded-lg z-10">
@@ -351,3 +426,19 @@ export default function App() {
     </div>
   );
 }
+
+
+
+  // { 
+  //   name: "Lahaina Historic District", 
+  //   coordinates: [-156.67665500607714, 20.875698021019634], 
+  //   afterImage: "images/donateImages/maui-food-bank-wide.jpg",
+  //   description: "Cultural heart of Lahaina, containing numerous historic buildings and landmarks."
+  // },
+
+    // { 
+  //   name: "Ulalena at Maui Theatre", 
+  //   coordinates: [-156.6799569299401, 20.876752716785354], 
+  //   afterImage: "images/backgroundImages/one.jpg",
+  //   description: "Cultural theater showcasing Hawaiian history and traditions."
+  // },
